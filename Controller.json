@@ -1,0 +1,754 @@
+{
+   "slots":{
+      "0":{
+         "name":"core",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "1":{
+         "name":"atmofueltank_1",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "2":{
+         "name":"spacefueltank_1",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "3":{
+         "name":"rocketfueltank_1",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "4":{
+         "name":"slot5",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "5":{
+         "name":"slot6",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "6":{
+         "name":"slot7",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "7":{
+         "name":"slot8",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "8":{
+         "name":"slot9",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "9":{
+         "name":"slot10",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "-1":{
+         "name":"unit",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "-2":{
+         "name":"system",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      },
+      "-3":{
+         "name":"library",
+         "type":{
+            "events":[
+               
+            ],
+            "methods":[
+               
+            ]
+         }
+      }
+   },
+   "handlers":[
+      {
+         "code":"-- category panel display helpers\n_autoconf = {}\n_autoconf.panels = {}\n_autoconf.panels_size = 0\n_autoconf.displayCategoryPanel = function(elements, size, title, type, widgetPerData)\n    widgetPerData = widgetPerData or false -- default to one widget for all data\n    if size > 0 then\n        local panel = system.createWidgetPanel(title)\n        local widget\n        if not widgetPerData then\n            widget = system.createWidget(panel, type)\n        end\n        for i = 1, size do\n            if widgetPerData then\n                widget = system.createWidget(panel, type)\n            end\n            system.addDataToWidget(elements[i].getDataId(), widget)\n        end\n        _autoconf.panels_size = _autoconf.panels_size + 1\n        _autoconf.panels[_autoconf.panels_size] = panel\n    end\nend\n_autoconf.hideCategoryPanels = function()\n    for i=1,_autoconf.panels_size do\n        system.destroyWidgetPanel(_autoconf.panels[i])\n    end\nend\n-- Proxy array to access auto-plugged slots programmatically\n\natmofueltank = {}\natmofueltank[1] = atmofueltank_1\natmofueltank_size = 1\n\nspacefueltank = {}\nspacefueltank[1] = spacefueltank_1\nspacefueltank_size = 1\n\nrocketfueltank = {}\n--rocketfueltank[1] = rocketfueltank_1\nrocketfueltank_size = 0\n\nweapon = {}\nweapon_size = 0\n\nradar = {}\nradar_size = 0\n-- End of auto-generated code\nNav = Navigator.new(system, core, unit)\nNav.axisCommandManager:setupCustomTargetSpeedRanges(axisCommandId.longitudinal, {1000, 5000, 10000, 20000, 30000})\n--Nav.axisCommandManager:setTargetGroundAltitude(4)\nNav.axisCommandManager:setTargetGroundAltitude(0)\n\n-- element widgets\n-- For now we have to alternate between PVP and non-PVP widgets to have them on the same side.\n_autoconf.displayCategoryPanel(weapon, weapon_size, \"Weapons\", \"weapon\", true)\ncore.show()\n_autoconf.displayCategoryPanel(radar, radar_size, \"Periscope\", \"periscope\")\nplaceRadar = true\nif atmofueltank_size > 0 then\n    _autoconf.displayCategoryPanel(atmofueltank, atmofueltank_size, \"Atmo Fuel\", \"fuel_container\")\n    if placeRadar then\n        _autoconf.displayCategoryPanel(radar, radar_size, \"Radar\", \"radar\")\n        placeRadar = false\n    end\nend\nif spacefueltank_size > 0 then\n    _autoconf.displayCategoryPanel(spacefueltank, spacefueltank_size, \"Space Fuel\", \"fuel_container\")\n    if placeRadar then\n        _autoconf.displayCategoryPanel(radar, radar_size, \"Radar\", \"radar\")\n        placeRadar = false\n    end\nend\n_autoconf.displayCategoryPanel(rocketfueltank, rocketfueltank_size, \"Rocket Fuel\", \"fuel_container\")\nif placeRadar then -- We either have only rockets or no fuel tanks at all, uncommon for usual vessels\n    _autoconf.displayCategoryPanel(radar, radar_size, \"Radar\", \"radar\")\n    placeRadar = false\nend\nif antigrav ~= nil then antigrav.show() end\nif warpdrive ~= nil then warpdrive.show() end\nif gyro ~= nil then gyro.show() end\n\n-- freeze the player in he is remote controlling the construct\nif Nav.control.isRemoteControlled() == 1 then\n    system.freeze(1)\nend\n\n-- landing gear\n-- make sure every gears are synchonized with the first\ngearExtended = (Nav.control.isAnyLandingGearExtended() == 1) -- make sure it's a lua boolean\nif gearExtended then\n    Nav.control.extendLandingGears()\nelse\n    Nav.control.retractLandingGears()\nend\n-- Mycode\nLastTime = system.getTime()\n\nfunction Kinematics()\n\n    local Kinematic = {} -- just a namespace\n    local C = 30000000 / 3600\n    local C2 = C * C\n    local ITERATIONS = 100 -- iterations over engine \"warm-up\" period\n    local function lorentz(v)\n        return 1 / math.sqrt(1 - v * v / C2)\n    end\n\n    function Kinematic.computeAccelerationTime(initial, acceleration, final)\n        -- The low speed limit of following is: t=(vf-vi)/a (from: vf=vi+at)\n        local k1 = C * math.asin(initial / C)\n        return (C * math.asin(final / C) - k1) / acceleration\n    end\n\n    function Kinematic.computeDistanceAndTime(initial, final, restMass, thrust, t50, brakeThrust)\n\n        t50 = t50 or 0\n        brakeThrust = brakeThrust or 0 -- usually zero when accelerating\n        local speedUp = initial <= final\n        local a0 = thrust * (speedUp and 1 or -1) / restMass\n        local b0 = -brakeThrust / restMass\n        local totA = a0 + b0\n        if speedUp and totA <= 0 or not speedUp and totA >= 0 then\n            return -1, -1 -- no solution\n        end\n        local distanceToMax, timeToMax = 0, 0\n\n        if a0 ~= 0 and t50 > 0 then\n\n            local k1 = math.asin(initial / C)\n            local c1 = math.pi * (a0 / 2 + b0)\n            local c2 = a0 * t50\n            local c3 = C * math.pi\n            local v = function(t)\n                local w = (c1 * t - c2 * math.sin(math.pi * t / 2 / t50) + c3 * k1) / c3\n                local tan = math.tan(w)\n                return C * tan / math.sqrt(tan * tan + 1)\n            end\n            local speedchk = speedUp and function(s)\n                return s >= final\n            end or function(s)\n                return s <= final\n            end\n            timeToMax = 2 * t50\n            if speedchk(v(timeToMax)) then\n                local lasttime = 0\n                while math.abs(timeToMax - lasttime) > 0.5 do\n                    local t = (timeToMax + lasttime) / 2\n                    if speedchk(v(t)) then\n                        timeToMax = t\n                    else\n                        lasttime = t\n                    end\n                end\n            end\n            -- There is no closed form solution for distance in this case.\n            -- Numerically integrate for time t=0 to t=2*T50 (or less)\n            local lastv = initial\n            local tinc = timeToMax / ITERATIONS\n            for step = 1, ITERATIONS do\n                local speed = v(step * tinc)\n                distanceToMax = distanceToMax + (speed + lastv) * tinc / 2\n                lastv = speed\n            end\n            if timeToMax < 2 * t50 then\n                return distanceToMax, timeToMax\n            end\n            initial = lastv\n        end\n\n        local k1 = C * math.asin(initial / C)\n        local time = (C * math.asin(final / C) - k1) / totA\n        local k2 = C2 * math.cos(k1 / C) / totA\n        local distance = k2 - C2 * math.cos((totA * time + k1) / C) / totA\n        return distance + distanceToMax, time + timeToMax\n    end\n\n    function Kinematic.computeTravelTime(initial, acceleration, distance)\n        -- The low speed limit of following is: t=(sqrt(2ad+v^2)-v)/a\n        -- (from: d=vt+at^2/2)\n        if distance == 0 then\n            return 0\n        end\n        if acceleration > 0 then\n            local k1 = C * math.asin(initial / C)\n            local k2 = C2 * math.cos(k1 / C) / acceleration\n            return (C * math.acos(acceleration * (k2 - distance) / C2) - k1) / acceleration\n        end\n        assert(initial > 0, 'Acceleration and initial speed are both zero.')\n        return distance / initial\n    end\n\n    function Kinematic.lorentz(v)\n        return lorentz(v)\n    end\n    return Kinematic\nend\n\n\nfunction getPitch(gravityDirection, forward, right)\n    local horizontalForward = gravityDirection:cross(right):normalize_inplace() -- Cross forward?\n    local pitch = math.acos(utils.clamp(horizontalForward:dot(-forward), -1, 1)) * constants.rad2deg -- acos?\n    if horizontalForward:cross(-forward):dot(right) < 0 then pitch = -pitch end -- Cross right dot forward?\n    return pitch\nend\n\nfunction NextPosition()\n    if button_3 then\n        NextDisplayPosition()\n    else\n        ChangingPositions = true\n        SelectedIndex = SelectedIndex + 1\n        if SelectedIndex > #Positions then\n            SelectedIndex = #Positions\n        end\n        if forcefield_1 then -- Gate\n            forcefield_1.activate()\n        end\n        local altitude = core.getAltitude()\n        StartDiff = Positions[SelectedIndex]-altitude\n        InitialDirection = utils.sign(StartDiff)\n        desiredBaseAltitude = Positions[SelectedIndex]\n        AntigravTargetAltitude = desiredBaseAltitude\n    end\nend\n\nfunction PrevPosition()\n    if button_3 then\n        PrevDisplayPosition()\n    else\n        ChangingPositions = true\n        SelectedIndex = SelectedIndex - 1\n        if SelectedIndex < 1 then\n            SelectedIndex = 1\n        end\n        if forcefield_1 then -- Gate\n            forcefield_1.activate()\n        end\n        local altitude = core.getAltitude()\n        StartDiff = Positions[SelectedIndex]-altitude\n        InitialDirection = utils.sign(StartDiff)\n        desiredBaseAltitude = Positions[SelectedIndex]\n        AntigravTargetAltitude = desiredBaseAltitude\n    end\nend\n\nfunction ExecuteDisplayPosition()\n    SelectedIndex = DisplayIndex\n    ChangingPositions = true\n    if forcefield_1 then -- Gate\n        forcefield_1.activate()\n    end\n    local altitude = core.getAltitude()\n    StartDiff = Positions[SelectedIndex]-altitude\n    InitialDirection = utils.sign(StartDiff)\n    desiredBaseAltitude = Positions[SelectedIndex]\n    AntigravTargetAltitude = desiredBaseAltitude\nend\n\nfunction NextDisplayPosition()\n    DisplayIndex = DisplayIndex + 1\n    if DisplayIndex > #Positions then\n        DisplayIndex = #Positions\n    end\nend\n\nfunction PrevDisplayPosition()\n    DisplayIndex = DisplayIndex - 1\n    if DisplayIndex < 1 then\n        DisplayIndex = 1\n    end\nend\n\nfunction getDistanceDisplayString(distance)\n    local su = distance > 100000\n    local result = \"\"\n    if su then\n        -- Convert to SU\n        result = utils.round(distance/1000/200,1) .. \" SU\"\n    elseif distance < 1000 then\n        result = utils.round(distance,1) .. \" M\"\n    else\n        -- Convert to KM\n        result = utils.round(distance/1000,1) .. \" KM\"\n    end\n\n    return result\nend\n\n",
+         "filter":{
+            "args":[
+               
+            ],
+            "signature":"start()",
+            "slotKey":"-1"
+         },
+         "key":"0"
+      },
+      {
+         "code":"_autoconf.hideCategoryPanels()\nif antigrav ~= nil then antigrav.hide() end\nif warpdrive ~= nil then warpdrive.hide() end\nif gyro ~= nil then gyro.hide() end\ncore.hide()\nNav.control.switchOffHeadlights()\n",
+         "filter":{
+            "args":[
+               
+            ],
+            "signature":"stop()",
+            "slotKey":"-1"
+         },
+         "key":"1"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateTargetGroundAltitudeFromActionStart(-1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"groundaltitudedown"
+               }
+            ],
+            "signature":"actionStart(groundaltitudedown)",
+            "slotKey":"-2"
+         },
+         "key":"2"
+      },
+      {
+         "code":"--Nav.axisCommandManager:updateCommandFromActionStop(axisCommandId.vertical, 1.0)\n--Nav.axisCommandManager:activateGroundEngineAltitudeStabilization(currentGroundAltitudeStabilization)",
+         "filter":{
+            "args":[
+               {
+                  "value":"down"
+               }
+            ],
+            "signature":"actionStop(down)",
+            "slotKey":"-2"
+         },
+         "key":"3"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateTargetGroundAltitudeFromActionStart(1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"groundaltitudeup"
+               }
+            ],
+            "signature":"actionStart(groundaltitudeup)",
+            "slotKey":"-2"
+         },
+         "key":"4"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateTargetGroundAltitudeFromActionLoop(1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"groundaltitudeup"
+               }
+            ],
+            "signature":"actionLoop(groundaltitudeup)",
+            "slotKey":"-2"
+         },
+         "key":"5"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateTargetGroundAltitudeFromActionLoop(-1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"groundaltitudedown"
+               }
+            ],
+            "signature":"actionLoop(groundaltitudedown)",
+            "slotKey":"-2"
+         },
+         "key":"6"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateCommandFromActionStart(axisCommandId.lateral, -1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"strafeleft"
+               }
+            ],
+            "signature":"actionStart(strafeleft)",
+            "slotKey":"-2"
+         },
+         "key":"7"
+      },
+      {
+         "code":"rollInput = rollInput + 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"left"
+               }
+            ],
+            "signature":"actionStop(left)",
+            "slotKey":"-2"
+         },
+         "key":"8"
+      },
+      {
+         "code":"--Nav.axisCommandManager:updateCommandFromActionStop(axisCommandId.vertical, -1.0)\n--Nav.axisCommandManager:activateGroundEngineAltitudeStabilization(currentGroundAltitudeStabilization)\n",
+         "filter":{
+            "args":[
+               {
+                  "value":"up"
+               }
+            ],
+            "signature":"actionStop(up)",
+            "slotKey":"-2"
+         },
+         "key":"9"
+      },
+      {
+         "code":"--Nav.axisCommandManager:deactivateGroundEngineAltitudeStabilization()\n--Nav.axisCommandManager:updateCommandFromActionStart(axisCommandId.vertical, -1.0)\n\n",
+         "filter":{
+            "args":[
+               {
+                  "value":"down"
+               }
+            ],
+            "signature":"actionStart(down)",
+            "slotKey":"-2"
+         },
+         "key":"10"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateCommandFromActionStop(axisCommandId.lateral, 1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"strafeleft"
+               }
+            ],
+            "signature":"actionStop(strafeleft)",
+            "slotKey":"-2"
+         },
+         "key":"11"
+      },
+      {
+         "code":"--Nav.axisCommandManager:deactivateGroundEngineAltitudeStabilization()\n--Nav.axisCommandManager:updateCommandFromActionStart(axisCommandId.vertical, 1.0)\n",
+         "filter":{
+            "args":[
+               {
+                  "value":"up"
+               }
+            ],
+            "signature":"actionStart(up)",
+            "slotKey":"-2"
+         },
+         "key":"12"
+      },
+      {
+         "code":"rollInput = rollInput - 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"right"
+               }
+            ],
+            "signature":"actionStop(right)",
+            "slotKey":"-2"
+         },
+         "key":"13"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateCommandFromActionStop(axisCommandId.lateral, -1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"straferight"
+               }
+            ],
+            "signature":"actionStop(straferight)",
+            "slotKey":"-2"
+         },
+         "key":"14"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateCommandFromActionStart(axisCommandId.lateral, 1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"straferight"
+               }
+            ],
+            "signature":"actionStart(straferight)",
+            "slotKey":"-2"
+         },
+         "key":"15"
+      },
+      {
+         "code":"pitchInput = pitchInput + 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"backward"
+               }
+            ],
+            "signature":"actionStart(backward)",
+            "slotKey":"-2"
+         },
+         "key":"16"
+      },
+      {
+         "code":"pitchInput = pitchInput + 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"forward"
+               }
+            ],
+            "signature":"actionStop(forward)",
+            "slotKey":"-2"
+         },
+         "key":"17"
+      },
+      {
+         "code":"--Nav.axisCommandManager:updateCommandFromActionLoop(axisCommandId.longitudinal, -1.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"speeddown"
+               }
+            ],
+            "signature":"actionLoop(speeddown)",
+            "slotKey":"-2"
+         },
+         "key":"18"
+      },
+      {
+         "code":"if antigrav ~= nil then antigrav.toggle() end",
+         "filter":{
+            "args":[
+               {
+                  "value":"antigravity"
+               }
+            ],
+            "signature":"actionStart(antigravity)",
+            "slotKey":"-2"
+         },
+         "key":"19"
+      },
+      {
+         "code":"Nav.axisCommandManager:updateCommandFromActionStart(axisCommandId.longitudinal, -5.0)",
+         "filter":{
+            "args":[
+               {
+                  "value":"speeddown"
+               }
+            ],
+            "signature":"actionStart(speeddown)",
+            "slotKey":"-2"
+         },
+         "key":"20"
+      },
+      {
+         "code":"local longitudinalCommandType = Nav.axisCommandManager:getAxisCommandType(axisCommandId.longitudinal)\nif (longitudinalCommandType == axisCommandType.byTargetSpeed) then\n    local targetSpeed = Nav.axisCommandManager:getTargetSpeed(axisCommandId.longitudinal)\n    if (math.abs(targetSpeed) > constants.epsilon) then\n        Nav.axisCommandManager:updateCommandFromActionLoop(axisCommandId.longitudinal, - utils.sign(targetSpeed))\n    end\nend\n",
+         "filter":{
+            "args":[
+               {
+                  "value":"brake"
+               }
+            ],
+            "signature":"actionLoop(brake)",
+            "slotKey":"-2"
+         },
+         "key":"21"
+      },
+      {
+         "code":"Nav:toggleBoosters()",
+         "filter":{
+            "args":[
+               {
+                  "value":"booster"
+               }
+            ],
+            "signature":"actionStart(booster)",
+            "slotKey":"-2"
+         },
+         "key":"22"
+      },
+      {
+         "code":"yawInput = yawInput + 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"yawright"
+               }
+            ],
+            "signature":"actionStop(yawright)",
+            "slotKey":"-2"
+         },
+         "key":"23"
+      },
+      {
+         "code":"yawInput = yawInput + 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"yawleft"
+               }
+            ],
+            "signature":"actionStart(yawleft)",
+            "slotKey":"-2"
+         },
+         "key":"24"
+      },
+      {
+         "code":"yawInput = yawInput - 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"yawright"
+               }
+            ],
+            "signature":"actionStart(yawright)",
+            "slotKey":"-2"
+         },
+         "key":"25"
+      },
+      {
+         "code":"yawInput = yawInput - 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"yawleft"
+               }
+            ],
+            "signature":"actionStop(yawleft)",
+            "slotKey":"-2"
+         },
+         "key":"26"
+      },
+      {
+         "code":"brakeInput = brakeInput + 1\nlocal longitudinalCommandType = Nav.axisCommandManager:getAxisCommandType(axisCommandId.longitudinal)\nif (longitudinalCommandType == axisCommandType.byTargetSpeed) then\n    local targetSpeed = Nav.axisCommandManager:getTargetSpeed(axisCommandId.longitudinal)\n    if (math.abs(targetSpeed) > constants.epsilon) then\n        Nav.axisCommandManager:updateCommandFromActionStart(axisCommandId.longitudinal, - utils.sign(targetSpeed))\n    end\nend\n",
+         "filter":{
+            "args":[
+               {
+                  "value":"brake"
+               }
+            ],
+            "signature":"actionStart(brake)",
+            "slotKey":"-2"
+         },
+         "key":"27"
+      },
+      {
+         "code":"brakeInput = brakeInput - 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"brake"
+               }
+            ],
+            "signature":"actionStop(brake)",
+            "slotKey":"-2"
+         },
+         "key":"28"
+      },
+      {
+         "code":"Nav.axisCommandManager:resetCommand(axisCommandId.longitudinal)",
+         "filter":{
+            "args":[
+               {
+                  "value":"stopengines"
+               }
+            ],
+            "signature":"actionStart(stopengines)",
+            "slotKey":"-2"
+         },
+         "key":"29"
+      },
+      {
+         "code":"--Nav.axisCommandManager:updateCommandFromActionStart(axisCommandId.longitudinal, 5.0)\ntargetAltitude = targetAltitude +5\nsystem.print(targetAltitude)",
+         "filter":{
+            "args":[
+               {
+                  "value":"speedup"
+               }
+            ],
+            "signature":"actionStart(speedup)",
+            "slotKey":"-2"
+         },
+         "key":"30"
+      },
+      {
+         "code":"--Nav.axisCommandManager:updateCommandFromActionLoop(axisCommandId.longitudinal, 1.0)\ntargetAltitude = targetAltitude +5\nsystem.print(\"Teszt\")\nsystem.print(targetAltitude)",
+         "filter":{
+            "args":[
+               {
+                  "value":"speedup"
+               }
+            ],
+            "signature":"actionLoop(speedup)",
+            "slotKey":"-2"
+         },
+         "key":"31"
+      },
+      {
+         "code":"rollInput = rollInput - 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"left"
+               }
+            ],
+            "signature":"actionStart(left)",
+            "slotKey":"-2"
+         },
+         "key":"32"
+      },
+      {
+         "code":"pitchInput = pitchInput - 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"backward"
+               }
+            ],
+            "signature":"actionStop(backward)",
+            "slotKey":"-2"
+         },
+         "key":"33"
+      },
+      {
+         "code":"if Nav.control.isAnyHeadlightSwitchedOn() == 1 then\n    Nav.control.switchOffHeadlights()\nelse\n    Nav.control.switchOnHeadlights()\nend\n",
+         "filter":{
+            "args":[
+               {
+                  "value":"light"
+               }
+            ],
+            "signature":"actionStart(light)",
+            "slotKey":"-2"
+         },
+         "key":"34"
+      },
+      {
+         "code":"pitchInput = pitchInput - 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"forward"
+               }
+            ],
+            "signature":"actionStart(forward)",
+            "slotKey":"-2"
+         },
+         "key":"35"
+      },
+      {
+         "code":"-- constants: use 'myvar = defaultValue --export: description' to expose the variable in context menu\n\nlocal pitchSpeedFactor = 0.8 --export: This factor will increase/decrease the player input along the pitch axis<br>(higher value may be unstable)<br>Valid values: Superior or equal to 0.01\nlocal yawSpeedFactor =  1 --export: This factor will increase/decrease the player input along the yaw axis<br>(higher value may be unstable)<br>Valid values: Superior or equal to 0.01\nlocal rollSpeedFactor = 1.5 --export: This factor will increase/decrease the player input along the roll axis<br>(higher value may be unstable)<br>Valid values: Superior or equal to 0.01\n\nlocal brakeSpeedFactor = 3 --export: When braking, this factor will increase the brake force by brakeSpeedFactor * velocity<br>Valid values: Superior or equal to 0.01\nlocal brakeFlatFactor = 1 --export: When braking, this factor will increase the brake force by a flat brakeFlatFactor * velocity direction><br>(higher value may be unstable)<br>Valid values: Superior or equal to 0.01\n\nlocal autoRoll = false --export: [Only in atmosphere]<br>When the pilot stops rolling,  flight model will try to get back to horizontal (no roll)\nlocal autoRollFactor = 80 --export: [Only in atmosphere]<br>When autoRoll is engaged, this factor will increase to strength of the roll back to 0<br>Valid values: Superior or equal to 0.01\n\nlocal turnAssist = false --export: [Only in atmosphere]<br>When the pilot is rolling, the flight model will try to add yaw and pitch to make the construct turn better<br>The flight model will start by adding more yaw the more horizontal the construct is and more pitch the more vertical it is\nlocal turnAssistFactor = 2 --export: [Only in atmosphere]<br>This factor will increase/decrease the turnAssist effect<br>(higher value may be unstable)<br>Valid values: Superior or equal to 0.01\n\n\nlocal torqueFactor = 2 -- Force factor applied to reach rotationSpeed<br>(higher value may be unstable)<br>Valid values: Superior or equal to 0.01\n\n-- validate params\npitchSpeedFactor = math.max(pitchSpeedFactor, 0.01)\nyawSpeedFactor = math.max(yawSpeedFactor, 0.01)\nrollSpeedFactor = math.max(rollSpeedFactor, 0.01)\ntorqueFactor = math.max(torqueFactor, 0.01)\nbrakeSpeedFactor = math.max(brakeSpeedFactor, 0.01)\nbrakeFlatFactor = math.max(brakeFlatFactor, 0.01)\nautoRollFactor = math.max(autoRollFactor, 0.01)\nturnAssistFactor = math.max(turnAssistFactor, 0.01)\n\n-- final inputs\nlocal finalPitchInput = pitchInput + system.getControlDeviceForwardInput()\nlocal finalRollInput = rollInput + system.getControlDeviceYawInput()\nlocal finalYawInput = yawInput - system.getControlDeviceLeftRightInput()\nlocal finalBrakeInput = brakeInput\n\n-- Axis\nlocal worldVertical = vec3(core.getWorldVertical()) -- along gravity\nlocal constructUp = vec3(core.getConstructWorldOrientationUp())\nlocal constructForward = vec3(core.getConstructWorldOrientationForward())\nlocal constructRight = vec3(core.getConstructWorldOrientationRight())\nlocal constructVelocity = vec3(core.getWorldVelocity())\nlocal constructVelocityDir = vec3(core.getWorldVelocity()):normalize()\nlocal currentRollDeg = getRoll(worldVertical, constructForward, constructRight)\nlocal currentRollDegAbs = math.abs(currentRollDeg)\nlocal currentRollDegSign = utils.sign(currentRollDeg)\n\n-- Rotation\nlocal constructAngularVelocity = vec3(core.getWorldAngularVelocity())\nlocal targetAngularVelocity = finalPitchInput * pitchSpeedFactor * constructRight\n                                + finalRollInput * rollSpeedFactor * constructForward\n                                + finalYawInput * yawSpeedFactor * constructUp\n\n-- --> MyCode\nlocal worldVertical = vec3(core.getWorldVertical())\n\nif reachAltitude then   \n    \n    Kinematic = Kinematics()\n    local time = system.getTime()\n    local deltaTime = time-LastTime\n    LastTime = time\n    local accel = vec3(core.getWorldAcceleration())\n\n    local vSpeed = constructVelocity:project_on(worldVertical):len()\n    local vSpeedSigned = vSpeed * -utils.sign(constructVelocity:dot(worldVertical))\n       \n    local alt = core.getAltitude() + vSpeedSigned*deltaTime + 2*(accel:len()*utils.sign(accel:dot(worldVertical)))*deltaTime*deltaTime\n   \n    local maxBrake = json.decode(unit.getData()).maxBrake\n                if maxBrake ~= nil then\n                    LastMaxBrake = maxBrake\n                end   \n    \n                    local brakeDistance = 0\n                if LastMaxBrake ~= nil then\n                    brakeDistance, _ = Kinematic.computeDistanceAndTime(vSpeed, 0, core.getConstructIMass(), 0, 0,\n                           LastMaxBrake - (core.g() * core.getConstructIMass())*utils.sign(vSpeedSigned))\n                end\n    \n \tlocal diff = (targetAltitude-alt)\n     diff = diff - utils.sign(diff)*brakeDistance\n     distanceToPos = targetAltitude-core.getAltitude()\n   \n     local targetSpeed = utils.clamp(diff,-MaxSpeed,MaxSpeed)\n    \n    if  (math.abs((targetAltitude-alt)) < 50 or math.abs(targetAltitude-alt) < 0) and  alt < 6000 then --math.abs(targetSpeed) < 5\n        finalBrakeInput = 1\n        else\n        finalBrakeInput = 0        \n    end\n    \n    local power = 3\n    local up_down_switch = 0\n    if alt < targetAltitude then\n        up_down_switch = -1\n        system.print(\"up: distance:\".. diff .. \"speed:\" .. math.abs(targetSpeed))        \n    targetVelocity = (up_down_switch * targetSpeed / 3.6) * worldVertical   \n    stabilization =  power * (targetVelocity - vec3(core.getWorldVelocity()))\n    Nav:setEngineCommand('vertical, brake, horizontal', stabilization -vec3(core.getWorldGravity()), vec3(), false)\n    \n\n    end\n\n    if alt > targetAltitude then\n        up_down_switch = 1\n       system.print(\"down: distance:\".. diff .. \"speed:\" .. math.abs(targetSpeed)) \n    targetVelocity = (up_down_switch * math.abs(targetSpeed) / 3.6) * worldVertical   \n    stabilization =  power * (targetVelocity - vec3(core.getWorldVelocity()))\n    Nav:setEngineCommand('vertical, brake, horizontal', stabilization -vec3(core.getWorldGravity()), vec3(), false)\n\n end\n    \n    --Nav.axisCommandManager:activateGroundEngineAltitudeStabilization(currentGroundAltitudeStabilization)\n    if boostcheck then\n       boostcheck = not boostcheck\n       system.print(\"Boostcheck:\" ..  intervall)      \n    end\n    --local \n    \n    local axisCRefDirection = vec3(core.getConstructOrientationUp())\n    local longitudinalEngineTags = 'vertical'\n    local maxKPAlongAxis = core.getMaxKinematicsParametersAlongAxis(longitudinalEngineTags, {axisCRefDirection:unpack()})\n    if unit.getAtmosphereDensity() == 0 then -- we are in space\n        --system.print(\"space \" .. maxKPAlongAxis[3]/1000)\n    else\n        --system.print(\"atmo\" .. maxKPAlongAxis[1]/1000)\n    end\n\n\nend    \n\n\nif lockrollpitch then \n\n    if (pitchPID == nil) then\n        pitchPID = pid.new(20 * 0.01, 0, 20 * 0.1) -- magic number tweaked to have a default factor in the 1-10 range\n    end\n    if (rollPID == nil) then\n        rollPID = pid.new(20 * 0.01, 0, 20 * 0.1) -- magic number tweaked to have a default factor in the 1-10 range\n    end\n    \n        -- pitch\n    local currentPitchDeg = getRoll(worldVertical, constructRight, -constructForward)\n    local currentPitchDegAbs = math.abs(currentPitchDeg)\n    local currentPitchDegSign = utils.sign(currentPitchDeg)\n    local targetPitchlDeg = utils.clamp(0,currentPitchDegAbs-30, currentPitchDegAbs+30);\n    local constructAngularVelocity = vec3(core.getWorldAngularVelocity())\n    local autoRPitchInput = pitchPID:get()\n    local targetRollDeg = utils.clamp(0,currentRollDegAbs-90, currentRollDegAbs+90);\n    \n    --system.print(\"Lock:\" .. currentRollDeg)\n\n    pitchPID:inject(targetPitchlDeg - currentPitchDeg)\n\n    rollPID:inject(targetRollDeg - currentRollDeg)\n    local autoRollInput = rollPID:get()\n\n\n    targetAngularVelocity = finalPitchInput * pitchSpeedFactor * constructRight\n                                    + finalRollInput * rollSpeedFactor * constructForward\n                                    + finalYawInput * yawSpeedFactor * constructUp\n    targetAngularVelocity = targetAngularVelocity + autoRollInput * constructForward\n    targetAngularVelocity = targetAngularVelocity + autoRPitchInput * constructRight\n\n\n    --system.print(\"Roll:\" .. currentRollDeg)\n    --system.print(\"Pitch:\" .. currentPitchDeg)\n-- MyCode <-- \nend\n-- In atmosphere?\nif worldVertical:len() > 0.01 and unit.getAtmosphereDensity() > 0.0 then\n    local autoRollRollThreshold = 1.0\n    -- autoRoll on AND currentRollDeg is big enough AND player is not rolling\n    if autoRoll == true and currentRollDegAbs > autoRollRollThreshold and finalRollInput == 0 then\n        local targetRollDeg = utils.clamp(0,currentRollDegAbs-30, currentRollDegAbs+30);  -- we go back to 0 within a certain limit\n        if (rollPID == nil) then\n            rollPID = pid.new(autoRollFactor * 0.01, 0, autoRollFactor * 0.1) -- magic number tweaked to have a default factor in the 1-10 range\n        end\n        rollPID:inject(targetRollDeg - currentRollDeg)\n        local autoRollInput = rollPID:get()\n\n        targetAngularVelocity = targetAngularVelocity + autoRollInput * constructForward\n    end\n    local turnAssistRollThreshold = 20.0\n    -- turnAssist AND currentRollDeg is big enough AND player is not pitching or yawing\n    if turnAssist == true and currentRollDegAbs > turnAssistRollThreshold and finalPitchInput == 0 and finalYawInput == 0 then\n        local rollToPitchFactor = turnAssistFactor * 0.1 -- magic number tweaked to have a default factor in the 1-10 range\n        local rollToYawFactor = turnAssistFactor * 0.025 -- magic number tweaked to have a default factor in the 1-10 range\n\n        -- rescale (turnAssistRollThreshold -> 180) to (0 -> 180)\n        local rescaleRollDegAbs = ((currentRollDegAbs - turnAssistRollThreshold) / (180 - turnAssistRollThreshold)) * 180\n        local rollVerticalRatio = 0\n        if rescaleRollDegAbs < 90 then\n            rollVerticalRatio = rescaleRollDegAbs / 90\n        elseif rescaleRollDegAbs < 180 then\n            rollVerticalRatio = (180 - rescaleRollDegAbs) / 90\n        end\n\n        rollVerticalRatio = rollVerticalRatio * rollVerticalRatio\n\n        local turnAssistYawInput = - currentRollDegSign * rollToYawFactor * (1.0 - rollVerticalRatio)\n        local turnAssistPitchInput = rollToPitchFactor * rollVerticalRatio\n\n        targetAngularVelocity = targetAngularVelocity\n                            + turnAssistPitchInput * constructRight\n                            + turnAssistYawInput * constructUp\n    end\nend\n\n-- Engine commands\nlocal keepCollinearity = 1 -- for easier reading\nlocal dontKeepCollinearity = 0 -- for easier reading\nlocal tolerancePercentToSkipOtherPriorities = 1 -- if we are within this tolerance (in%), we don't go to the next priorities\n\n-- Rotation\nlocal angularAcceleration = torqueFactor * (targetAngularVelocity - constructAngularVelocity)\nlocal airAcceleration = vec3(core.getWorldAirFrictionAngularAcceleration())\nangularAcceleration = angularAcceleration - airAcceleration -- Try to compensate air friction\nNav:setEngineTorqueCommand('torque', angularAcceleration, keepCollinearity, 'airfoil', '', '', tolerancePercentToSkipOtherPriorities)\n\n-- Brakes\nlocal brakeAcceleration = -finalBrakeInput * (brakeSpeedFactor * constructVelocity + brakeFlatFactor * constructVelocityDir)\nNav:setEngineForceCommand('brake', brakeAcceleration)\n\n-- AutoNavigation regroups all the axis command by 'TargetSpeed'\nlocal autoNavigationEngineTags = ''\nlocal autoNavigationAcceleration = vec3()\nlocal autoNavigationUseBrake = false\n\n-- Longitudinal Translation\nlocal longitudinalEngineTags = 'thrust analog longitudinal'\nlocal longitudinalCommandType = Nav.axisCommandManager:getAxisCommandType(axisCommandId.longitudinal)\nif (longitudinalCommandType == axisCommandType.byThrottle) then\n    local longitudinalAcceleration = Nav.axisCommandManager:composeAxisAccelerationFromThrottle(longitudinalEngineTags,axisCommandId.longitudinal)\n    Nav:setEngineForceCommand(longitudinalEngineTags, longitudinalAcceleration, keepCollinearity)\nelseif  (longitudinalCommandType == axisCommandType.byTargetSpeed) then\n    local longitudinalAcceleration = Nav.axisCommandManager:composeAxisAccelerationFromTargetSpeed(axisCommandId.longitudinal)\n    autoNavigationEngineTags = autoNavigationEngineTags .. ' , ' .. longitudinalEngineTags\n    autoNavigationAcceleration = autoNavigationAcceleration + longitudinalAcceleration\n    if (Nav.axisCommandManager:getTargetSpeed(axisCommandId.longitudinal) == 0 or -- we want to stop\n        Nav.axisCommandManager:getCurrentToTargetDeltaSpeed(axisCommandId.longitudinal) < - Nav.axisCommandManager:getTargetSpeedCurrentStep(axisCommandId.longitudinal) * 0.5) -- if the longitudinal velocity would need some braking\n    then\n        autoNavigationUseBrake = true\n    end\n\nend\n\n-- Lateral Translation\nlocal lateralStrafeEngineTags = 'thrust analog lateral'\nlocal lateralCommandType = Nav.axisCommandManager:getAxisCommandType(axisCommandId.lateral)\nif (lateralCommandType == axisCommandType.byThrottle) then\n    local lateralStrafeAcceleration =  Nav.axisCommandManager:composeAxisAccelerationFromThrottle(lateralStrafeEngineTags,axisCommandId.lateral)\n    Nav:setEngineForceCommand(lateralStrafeEngineTags, lateralStrafeAcceleration, keepCollinearity)\nelseif  (lateralCommandType == axisCommandType.byTargetSpeed) then\n    local lateralAcceleration = Nav.axisCommandManager:composeAxisAccelerationFromTargetSpeed(axisCommandId.lateral)\n    autoNavigationEngineTags = autoNavigationEngineTags .. ' , ' .. lateralStrafeEngineTags\n    autoNavigationAcceleration = autoNavigationAcceleration + lateralAcceleration\nend\nif not reachAltitude then \n-- Vertical Translation\nlocal verticalStrafeEngineTags = 'thrust analog vertical'\nlocal verticalCommandType = Nav.axisCommandManager:getAxisCommandType(axisCommandId.vertical)\nif (verticalCommandType == axisCommandType.byThrottle) then\n    local verticalStrafeAcceleration = Nav.axisCommandManager:composeAxisAccelerationFromThrottle(verticalStrafeEngineTags,axisCommandId.vertical)\n    Nav:setEngineForceCommand(verticalStrafeEngineTags, verticalStrafeAcceleration, keepCollinearity, 'airfoil', 'ground', '', tolerancePercentToSkipOtherPriorities)\nelseif  (verticalCommandType == axisCommandType.byTargetSpeed) then\n    local verticalAcceleration = Nav.axisCommandManager:composeAxisAccelerationFromTargetSpeed(axisCommandId.vertical)\n    autoNavigationEngineTags = autoNavigationEngineTags .. ' , ' .. verticalStrafeEngineTags\n    autoNavigationAcceleration = autoNavigationAcceleration + verticalAcceleration\nend\n    end\n-- Auto Navigation (Cruise Control)\nif (autoNavigationAcceleration:len() > constants.epsilon) then\n    if (brakeInput ~= 0 or autoNavigationUseBrake or math.abs(constructVelocityDir:dot(constructForward)) < 0.95)  -- if the velocity is not properly aligned with the forward\n    then\n        autoNavigationEngineTags = autoNavigationEngineTags .. ', brake'\n    end\n    Nav:setEngineForceCommand(autoNavigationEngineTags, autoNavigationAcceleration, dontKeepCollinearity, '', '', '', tolerancePercentToSkipOtherPriorities)\nend\n\n-- Rockets\n-- Nav:setBoosterCommand('rocket_engine')\n",
+         "filter":{
+            "args":[
+               
+            ],
+            "signature":"flush()",
+            "slotKey":"-2"
+         },
+         "key":"36"
+      },
+      {
+         "code":"local checkIntervall = 5 --export: [Only in atmosphere]<br>This factor will increase/decrease the turnAssist effect<br>(higher value may be unstable)<br>Valid values: Superior or equal to 0.01\n\nNav:update()\n\n-- hud / Place in System Update filter\nlocal lockrollpitchHud = ternary(lockrollpitch, '<div class=\"on\"></div>',\n                             '<div class=\"off\"></div>')\n\nlocal reachAltitudeHud = ternary(reachAltitude, '<div class=\"on\"></div>',\n                             '<div class=\"off\"></div>')\n\nlocal css = [[\n<style>\n.zen {\ndisplay: flex;\nflex-direction: column;\n}\n.controls-hud {\n  display: flex;\n  flex-direction: column;\n  justify-content: space-around;\n  background-color: #34495E50;\n  border-color: #333333;\n  border-radius: 12px;\n  width: 20%;\n  padding: 1% 1.5%;\n  overflow: none;\n}\np {\n  font-size: 20px;  \n  font-weight: 300;\n  color: white;\n}\n.control-container {\n  display: flex;\n  justify-content: space-between;\n  padding: 1%;\n}\n.on {\n  background-color: #039bef;\n  margin-left: 10px;\n  border-radius: 50%;\n  width: 20px;\n  height: 20px;\n  border: 2px solid black;\n}\n.off {\n  background-color: red;\n  margin-left: 10px;\n  border-radius: 50%;\n  width: 20px;\n  height: 20px;\n  border: 2px solid black;\n}\n</style>]]\n\n\nlocal html = [[\n<div class=\"zen\">\n  <div class=\"controls-hud\">\n    <div class=\"control-container\">\n      <p>Lock Axis (alt1)</p>\n      ]] .. lockrollpitchHud .. [[\n    </div>\n    <div class=\"control-container\">\n      <p>Reach Altitude (alt2)</p>\n      ]] .. reachAltitudeHud .. [[\n    </div>\n<div class=\"control-container\">\n      <p>Target Altitude</p>\n      ]] .. targetAltitude .. [[\n    </div>\n</div>\n</div>]]\n\nsystem.setScreen(css .. html)\nsystem.showScreen(1)\n\n local velocity = vec3(core.getWorldVelocity())\n                local up = vec3(core.getWorldVertical()) * -1\n                local vSpd = (velocity.x * up.x) + (velocity.y * up.y) + (velocity.z * up.z)\nlocal speed = vSpd *3.6\n--system.print(\"WorldVertical\" ..  speed)\n\nintervall = system.getTime() - startuptime\nif intervall > checkIntervall then\n    startuptime = system.getTime()\n    boostcheck = true\nend\n    \n--runningsince = system.getTime() - startuptime",
+         "filter":{
+            "args":[
+               
+            ],
+            "signature":"update()",
+            "slotKey":"-2"
+         },
+         "key":"37"
+      },
+      {
+         "code":"pitchInput = 0\nrollInput = 0\nyawInput = 0\nbrakeInput = 0\nfinalBrakeInput = 0 \n-- mycode\nMaxSpeed = 1100 --export: in m/s, max speed up or down\nlockrollpitch = false\nreachAltitude = false\ntargetAltitude = core.getAltitude()\nstartuptime = system.getTime()\nboostcheck = false\nRemoteFreeze = true --export: Whether or not to freeze you when using a remote controller.  Breaks some things, only freeze on surfboards",
+         "filter":{
+            "args":[
+               
+            ],
+            "signature":"start()",
+            "slotKey":"-2"
+         },
+         "key":"38"
+      },
+      {
+         "code":"gearExtended = not gearExtended\nif gearExtended then\n    Nav.control.extendLandingGears()\nelse\n    Nav.control.retractLandingGears()\nend\n",
+         "filter":{
+            "args":[
+               {
+                  "value":"gear"
+               }
+            ],
+            "signature":"actionStart(gear)",
+            "slotKey":"-2"
+         },
+         "key":"39"
+      },
+      {
+         "code":"rollInput = rollInput + 1",
+         "filter":{
+            "args":[
+               {
+                  "value":"right"
+               }
+            ],
+            "signature":"actionStart(right)",
+            "slotKey":"-2"
+         },
+         "key":"40"
+      },
+      {
+         "code":"if warpdrive ~= nil then warpdrive.activateWarp() end",
+         "filter":{
+            "args":[
+               {
+                  "value":"warp"
+               }
+            ],
+            "signature":"actionStart(warp)",
+            "slotKey":"-2"
+         },
+         "key":"41"
+      },
+      {
+         "code":"lockrollpitch = not lockrollpitch\n",
+         "filter":{
+            "args":[
+               {
+                  "value":"option1"
+               }
+            ],
+            "signature":"actionStart(action)",
+            "slotKey":"-2"
+         },
+         "key":"42"
+      },
+      {
+         "code":"reachAltitude = not reachAltitude",
+         "filter":{
+            "args":[
+               {
+                  "value":"option2"
+               }
+            ],
+            "signature":"actionStart(action)",
+            "slotKey":"-2"
+         },
+         "key":"43"
+      },
+      {
+         "code":"targetAltitude = targetAltitude - 5\nsystem.print(targetAltitude)",
+         "filter":{
+            "args":[
+               {
+                  "value":"down"
+               }
+            ],
+            "signature":"actionLoop(action)",
+            "slotKey":"-2"
+         },
+         "key":"44"
+      },
+      {
+         "code":"targetAltitude = targetAltitude + 5\nsystem.print(targetAltitude)",
+         "filter":{
+            "args":[
+               {
+                  "value":"up"
+               }
+            ],
+            "signature":"actionLoop(action)",
+            "slotKey":"-2"
+         },
+         "key":"45"
+      },
+      {
+         "code":"function ternary(cond, T, F)\n    if cond then\n        return T\n    else\n        return F\n    end\nend\n\n-- Round function / place in Library Start filter\n\nfunction round(num, numDecimalPlaces)\n    local mult = 10 ^ (numDecimalPlaces or 0)\n    if numDecimalPlaces ~= nil then\n        return math.floor(num * mult + 0.5) / mult\n    else\n        return math.floor((num * mult + 0.5) / mult)\n    end\nend",
+         "filter":{
+            "args":[
+               
+            ],
+            "signature":"start()",
+            "slotKey":"-3"
+         },
+         "key":"46"
+      }
+   ],
+   "methods":[
+      
+   ],
+   "events":[
+      
+   ]
+}
