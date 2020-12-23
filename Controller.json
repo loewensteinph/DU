@@ -146,7 +146,7 @@
    },
    "handlers":[
       {
-         "code":"targetAltitude = 600",
+         "code":"targetAltitude = 3000",
          "filter":{
             "args":[
                
@@ -157,7 +157,7 @@
          "key":"0"
       },
       {
-         "code":"targetAltitude = 277",
+         "code":"targetAltitude = 272",
          "filter":{
             "args":[
                
@@ -654,7 +654,7 @@
          "key":"39"
       },
       {
-         "code":"pitchInput = 0\nrollInput = 0\nyawInput = 0\nbrakeInput = 0\nfinalBrakeInput = 0 \nbrakeDistance = 0\ntargetSpeed = 0\nalt = 0\nalt_climbed = 0\nheight = core.getAltitude()\nstart_height = core.getAltitude()\nstartPosition = vec3(core.getConstructWorldPos())\nstartVertical = -vec3(core.getWorldVertical())\nForward = vec3(core.getConstructWorldOrientationForward())\n-- mycode\nMaxSpeedAtmo = 1100 --export: in m/s, max speed up or down\nMaxSpeedSpace = 1100 --export: in m/s, max speed up or down\nlockrollpitch = true\nreachAltitude = true\ntargetAltitude = core.getAltitude()\nstartuptime = system.getTime()\nboostcheck = false\nRemoteFreeze = true --export: Whether or not to freeze you when using a remote controller.  Breaks some things, only freeze on surfboards\n\ndiff = 0\noffsetHud = 0\nfinalLatOffset = 0\nfinalLongOffset = 0\nbrakeDistance = 0\n\nfunction getPitch(gravityDirection, forward, right)\n\tlocal horizontalForward = gravityDirection:cross(right):normalize_inplace() -- Cross forward?\n     local pitch = math.acos(utils.clamp(horizontalForward:dot(-forward), -1, 1)) * constants.rad2deg -- acos?\n     if horizontalForward:cross(-forward):dot(right) < 0 then pitch = -pitch end -- Cross right dot forward?\n     \treturn pitch\nend\n\n",
+         "code":"pitchInput = 0\nrollInput = 0\nyawInput = 0\nbrakeInput = 0\nfinalBrakeInput = 0 \nbrakeDistance = 0\ntargetSpeed = 0\nincrement = 0\nalt = 0\nalt_climbed = 0\nheight = core.getAltitude()\nstart_height = core.getAltitude()\nstartPosition = vec3(core.getConstructWorldPos())\nstartVertical = -vec3(core.getWorldVertical())\nForward = vec3(core.getConstructWorldOrientationForward())\n-- mycode\nMaxSpeedAtmo = 1100 --export: in m/s, max speed up or down\nMaxSpeedSpace = 1100 --export: in m/s, max speed up or down\nlockrollpitch = true\nreachAltitude = true\ntargetAltitude = core.getAltitude()\nstartuptime = system.getTime()\nboostcheck = false\nRemoteFreeze = true --export: Whether or not to freeze you when using a remote controller.  Breaks some things, only freeze on surfboards\n\ndiff = 0\noffsetHud = 0\nfinalLatOffset = 0\nfinalLongOffset = 0\nbrakeDistance = 0\n\nfunction getPitch(gravityDirection, forward, right)\n\tlocal horizontalForward = gravityDirection:cross(right):normalize_inplace() -- Cross forward?\n     local pitch = math.acos(utils.clamp(horizontalForward:dot(-forward), -1, 1)) * constants.rad2deg -- acos?\n     if horizontalForward:cross(-forward):dot(right) < 0 then pitch = -pitch end -- Cross right dot forward?\n     \treturn pitch\nend\n\n",
          "filter":{
             "args":[
                
